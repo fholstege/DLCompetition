@@ -11,19 +11,12 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 from tensorflow.keras.losses import MeanSquaredLogarithmicError
 from sklearn import preprocessing
-
-from keras.models import Sequential
-from keras.layers import BatchNormalization, Dense, Input, Dropout
-from keras.models import Model
-from keras import backend as K
-from sklearn.model_selection import train_test_split
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-import matplotlib.pyplot as plt
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.regularizers import L1L2
-from sklearn import preprocessing
-from keras.models import load_model
+
+
+from define_models import get_base_model
+
+
 
 
 # this is the training data - we need to split this in train, validation.
@@ -76,40 +69,6 @@ X_train, X_valid, y_train, y_valid = train_test_split(X_train_valid, y_train_val
 #
 #####################
 
-
-
-def get_base_model(input_dim, base_n_nodes, multiplier_n_nodes, prob_dropout):
-    """
-
-    Parameters
-    ----------
-    input_dim : integer
-        The number of independent variables.
-
-    base_n_nodes : integer
-        The number of nodes for the first layer
-    multiplier_n_nodes : float, [0,1]
-        with each layer that we add, 
-        we decrease the nodes to the number 
-        of nodes in previous layer multiplied with this float, .
-    prob_dropout : float, [0,1]
-        The probability of dropout.
-
-    Returns
-    -------
-    model: a model object.
-
-   """
-   
-    n_second_layer = base_n_nodes* multiplier_n_nodes
-
-    model = Sequential()
-    model.add(Dense(base_n_nodes, input_dim=input_dim, kernel_initializer='normal', activation='relu'))
-    model.add(Dense(n_second_layer, activation='relu'))
-    model.add(Dense(1, activation='linear'))
-   
-    model.compile(optimizer='Adam', loss=MeanSquaredLogarithmicError(), metrics=['mean_absolute_error'])
-    return model
 
 
 # base model - can tweak hyper parameters
