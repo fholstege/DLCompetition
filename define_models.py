@@ -53,7 +53,7 @@ def get_base_model(input_dim, base_n_nodes, multiplier_n_nodes):
     return model
 
 
-def get_base_model_with_dropout_batchNorm(input_dim, base_n_nodes, multiplier_n_nodes, prob_dropout):
+def get_base_model_with_dropout(input_dim, base_n_nodes, multiplier_n_nodes, prob_dropout):
     """
 
     Parameters
@@ -81,10 +81,19 @@ def get_base_model_with_dropout_batchNorm(input_dim, base_n_nodes, multiplier_n_
     n_second_layer = base_n_nodes* multiplier_n_nodes
 
     model = Sequential()
-    model.add(Dense(base_n_nodes, input_dim=input_dim, kernel_initializer='normal', activation='relu'))
+    
+    # define first layer
+    model.add(Dense(base_n_nodes,input_dim=input_dim,kernel_initializer = 'normal' ,activation='relu'))
+    
+    # drop out after first layer
     model.add(Dropout(prob_dropout))
+    
+    
+    # add another layer and dropout
     model.add(Dense(n_second_layer, activation='relu'))
     model.add(Dropout(prob_dropout))
+    
+    # put out final prediction
     model.add(Dense(1, activation='linear'))
    
     model.compile(optimizer='Adam', loss=MeanSquaredLogarithmicError(), metrics=['mean_absolute_error'])

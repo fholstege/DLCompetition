@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
 
 # import custom models defined in define_models
-from define_models import get_base_model, get_base_model_with_dropout_batchNorm
+from define_models import get_base_model, get_base_model_with_dropout
 
 
 filepath_models = 'files_models'
@@ -104,12 +104,12 @@ print('Results Base model - \n Training Loss : {}\nValidation Loss : {} \n Test 
 
 
 #####################
-# In this part of the code, we extend the most basic model - add dropout, batch normalization
+# In this part of the code, we extend the most basic model - add dropout
 #
 #####################
 
 # base model extended 
-base_model_extended = get_base_model_with_dropout_batchNorm(input_dim=24, base_n_nodes=24, multiplier_n_nodes = 0.5, prob_dropout = 0.2)
+base_model_extended = get_base_model_with_dropout(input_dim=24, base_n_nodes=36, multiplier_n_nodes = 0.5, prob_dropout = 0.3)
 base_model_extended.summary()
 
 # save the weights of the model here
