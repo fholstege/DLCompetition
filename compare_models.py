@@ -5,6 +5,7 @@ Created on Mon Mar 22 19:33:08 2021
 @author: flori
 """
 
+from pathlib import Path
 import pandas as pd
 import sklearn 
 from sklearn.model_selection import train_test_split
@@ -19,66 +20,60 @@ from sklearn.metrics import mean_squared_log_error
 # import custom models defined in define_models
 from define_models import get_base_model, get_base_model_with_dropout
 
-
+# define path for models
 filepath_models = 'files_models'
 
-# this is the training data - we need to split this in train, validation.
-# We also should get a test sample from this dataset, to see how we perform out of sample berfore submission
-df_train_data = pd.read_csv("https://www.dropbox.com/s/bawlkeolef1bse2/train_dat.csv?dl=1", 
-                        sep= ",")
+# define data path
+data_path = (Path(__file__).parent/"data")
 
-# this is the test data for the competition - we save this here for later
-df_test_data = pd.read_csv("https://www.dropbox.com/s/rbjatpuk5x7dios/test_dat.csv?dl=1", 
-                         sep= ",")
+# load train and test set
+train_df = pd.read_hdf(data_path/"train_df.hdf5")
+test_df = pd.read_hdf(data_path/"test_df.hdf5")
 
-# define what percentage for validation, what percentage for test - we use this for training
+# define what percentage for validation
 validation_perc = 0.2
-test_perc = 0.1
 
 # define random state
 state = 123
-        
-l_continuous_features = ['OverallQual', 'OverallCond', 
-       'TotalBsmtSF', 'X1stFlrSF', 'X2ndFlrSF', 'LowQualFinSF', 'GrLivArea',
-       'BsmtFullBath', 'BsmtHalfBath', 'FullBath', 'HalfBath', 'BedroomAbvGr',
-       'KitchenAbvGr', 'TotRmsAbvGrd', 'Fireplaces', 'GarageCars',
-       'GarageArea', 'WoodDeckSF', 'OpenPorchSF', 'EnclosedPorch',
-       'X3SsnPorch', 'ScreenPorch', 'PoolArea', 'MiscVal' ]
 
-# select continuous features, and scale these
-df_X_selectedFeatures = df_train_data[l_continuous_features]
+# define training vars
+X_train = train_df.drop("y_train", axis = 1)
+y_train = train_df["y_train"]
 
-df_X_scaled = preprocessing.StandardScaler().fit_transform(df_X_selectedFeatures)
+# define validation set
+X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size = validation_perc, random_state = state)
 
-# define dataframe with y variable
-df_Y = df_train_data['y_train']
+# scale training data, use same mean for train and test set
+data_scaler = preprocessing.StandardScaler()
+data_scaler.fit(X_train)
+X_train_sc = data_scaler.transform(X_train)
+X_valid_sc = data_scaler.transform(X_valid)
 
-
-# turn to numpy arrays
-X = df_X_scaled
-y = np.array(df_Y.values)
-
-# get dataframes for training and test, and then for validation
-X_train_valid, X_test, y_train_valid, y_test  = train_test_split(X, y, test_size= test_perc, random_state = state)
-X_train, X_valid, y_train, y_valid = train_test_split(X_train_valid, y_train_valid, test_size = validation_perc, random_state = state )
+# using CV would mean to first determine the test fold, then do scaling based on rest of folds
 
 # apply smogn to oversample
-df_train_smogn = pd.concat([pd.DataFrame(X_train),pd.DataFrame(y_train)], axis = 1)
-df_train_smogn.columns = l_continuous_features + ['y_train']
-df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='balance' )
+# df_train_smogn = pd.concat([pd.DataFrame(X_train),pd.DataFrame(y_train)], axis = 1)
+# df_train_smogn.columns = l_continuous_features + ['y_train']
+# df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='balance' )
 
-# get X train and y train from oversampling class 
-X_train_synthetic = np.array(df_train_synthetic[l_continuous_features])
-y_train_synthetic = np.array(df_train_synthetic['y_train'])
+# # get X train and y train from oversampling class 
+# X_train_synthetic = np.array(df_train_synthetic[l_continuous_features])
+# y_train_synthetic = np.array(df_train_synthetic['y_train'])
+
+
+
+
+
+
+
 
 #####################
 # In this part of the code, we try out the most basic model - only continuous features, 2 layers
 #
 #####################
 
-
 # base model 
-base_model = get_base_model(input_dim=24, base_n_nodes=24, multiplier_n_nodes = 0.5)
+base_model = get_base_model(input_dim=X_train_sc.shape[1], base_n_nodes=24, multiplier_n_nodes = 0.5)
 base_model.summary()
 
 # save the weights of the best base model here

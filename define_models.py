@@ -42,7 +42,7 @@ def get_base_model(input_dim, base_n_nodes, multiplier_n_nodes):
 
    """
    
-    n_second_layer = base_n_nodes* multiplier_n_nodes
+    n_second_layer = int(round(base_n_nodes* multiplier_n_nodes))
 
     model = Sequential()
     model.add(Dense(base_n_nodes, input_dim=input_dim, kernel_initializer='normal', activation='relu'))
