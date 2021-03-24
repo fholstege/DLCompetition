@@ -23,7 +23,7 @@ import os
 from define_models import get_base_model, get_base_model_with_dropout
 
 # define path for models
-filepath_models = 'files_models'
+filepath_models = 'files_models/'
 
 # define data path
 data_path = Path(os.getcwd()).parent/"DLCompetition/data"
@@ -51,12 +51,15 @@ data_scaler = preprocessing.StandardScaler()
 X_train_sc = data_scaler.fit_transform(X_train)
 X_valid_sc = data_scaler.fit_transform(X_valid)
 
+# turn into numpy array
+y_train, y_valid = np.array(y_train), np.array(y_valid)
+
 # using CV would mean to first determine the test fold, then do scaling based on rest of folds
 
 # apply smogn to oversample
-# df_train_smogn = pd.concat([pd.DataFrame(X_train),pd.DataFrame(y_train)], axis = 1)
-# df_train_smogn.columns = l_continuous_features + ['y_train']
-# df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='balance' )
+df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axis = 1)
+df_train_smogn.columns = l_continuous_features + ['y_train']
+df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='balance' )
 
 # # get X train and y train from oversampling class 
 # X_train_synthetic = np.array(df_train_synthetic[l_continuous_features])
@@ -85,7 +88,7 @@ checkpoints_base = ModelCheckpoint(
 early_stop = EarlyStopping(patience=20) 
 
 # train the base model, optimizing with validation
-history_base = base_model.fit(X_train_sc, np.array(y_train), validation_data=(X_valid_sc, np.array(y_valid)),
+history_base = base_model.fit(X_train_sc, y_train, validation_data=(X_valid_sc,y_valid),
           epochs=100, batch_size=1, callbacks=[early_stop ,checkpoints_base])
 
 
@@ -103,7 +106,7 @@ print('Results Base model - \n Training Loss : {}\nValidation Loss : {} \n Test 
 #####################
 
 # base model extended 
-base_model_extended = get_base_model_with_dropout(input_dim=24, base_n_nodes=36, multiplier_n_nodes = 0.5, prob_dropout = 0.3)
+base_model_extended = get_base_model_with_dropout(input_dim=X_train_sc.shape[1], base_n_nodes=211, multiplier_n_nodes = 0.5, prob_dropout = 0.3)
 base_model_extended.summary()
 
 # save the weights of the model here
@@ -114,7 +117,7 @@ checkpoints_extended = ModelCheckpoint(
           verbose=1)
 
 # train the model, optimizing with validation
-history_extended = base_model_extended.fit(X_train, y_train, validation_data=(X_valid, y_valid),
+history_extended = base_model_extended.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid),
           epochs=100, batch_size=1, callbacks=[early_stop ,checkpoints_extended])
 
 
