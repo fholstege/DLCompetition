@@ -16,6 +16,8 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 import smogn
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_log_error
+from pathlib import Path
+import os 
 
 # import custom models defined in define_models
 from define_models import get_base_model, get_base_model_with_dropout
@@ -24,11 +26,12 @@ from define_models import get_base_model, get_base_model_with_dropout
 filepath_models = 'files_models'
 
 # define data path
-data_path = (Path(__file__).parent/"data")
+data_path = Path(os.getcwd()).parent/"DLCompetition/data"
+data_path
 
 # load train and test set
-train_df = pd.read_hdf(data_path/"train_df.hdf5")
-test_df = pd.read_hdf(data_path/"test_df.hdf5")
+train_df = pd.read_hdf(data_path/'train_df.hdf5')
+test_df = pd.read_hdf(data_path/'test_df.hdf5')
 
 # define what percentage for validation
 validation_perc = 0.2
@@ -45,9 +48,8 @@ X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_siz
 
 # scale training data, use same mean for train and test set
 data_scaler = preprocessing.StandardScaler()
-data_scaler.fit(X_train)
-X_train_sc = data_scaler.transform(X_train)
-X_valid_sc = data_scaler.transform(X_valid)
+X_train_sc = data_scaler.fit_transform(X_train)
+X_valid_sc = data_scaler.fit_transform(X_valid)
 
 # using CV would mean to first determine the test fold, then do scaling based on rest of folds
 
@@ -64,16 +66,13 @@ X_valid_sc = data_scaler.transform(X_valid)
 
 
 
-
-
-
 #####################
 # In this part of the code, we try out the most basic model - only continuous features, 2 layers
 #
 #####################
 
 # base model 
-base_model = get_base_model(input_dim=X_train_sc.shape[1], base_n_nodes=24, multiplier_n_nodes = 0.5)
+base_model = get_base_model(input_dim=X_train_sc.shape[1], base_n_nodes=211, multiplier_n_nodes = 0.5)
 base_model.summary()
 
 # save the weights of the best base model here
@@ -86,7 +85,7 @@ checkpoints_base = ModelCheckpoint(
 early_stop = EarlyStopping(patience=20) 
 
 # train the base model, optimizing with validation
-history_base = base_model.fit(X_train, y_train, validation_data=(X_valid, y_valid),
+history_base = base_model.fit(X_train_sc, np.array(y_train), validation_data=(X_valid_sc, np.array(y_valid)),
           epochs=100, batch_size=1, callbacks=[early_stop ,checkpoints_base])
 
 
