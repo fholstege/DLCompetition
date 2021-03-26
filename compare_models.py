@@ -58,12 +58,12 @@ y_train, y_valid = np.array(y_train), np.array(y_valid)
 
 # apply smogn to oversample
 df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axis = 1)
-df_train_smogn.columns = l_continuous_features + ['y_train']
-df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='balance' )
+df_train_smogn.columns = list(X_train.columns) + ['y_train']
+df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='extreme' )
 
 # # get X train and y train from oversampling class 
-# X_train_synthetic = np.array(df_train_synthetic[l_continuous_features])
-# y_train_synthetic = np.array(df_train_synthetic['y_train'])
+ X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
+ y_train_synthetic = np.array(df_train_synthetic['y_train'])
 
 
 
@@ -106,7 +106,7 @@ print('Results Base model - \n Training Loss : {}\nValidation Loss : {} \n Test 
 #####################
 
 # base model extended 
-base_model_extended = get_base_model_with_dropout(input_dim=X_train_sc.shape[1], base_n_nodes=211, multiplier_n_nodes = 0.5, prob_dropout = 0.3)
+base_model_extended = get_base_model_with_dropout(input_dim=X_train_sc.shape[1], base_n_nodes=300, multiplier_n_nodes = 0.5, prob_dropout = 0.3)
 base_model_extended.summary()
 
 # save the weights of the model here
@@ -140,12 +140,12 @@ checkpoints_synthetic = ModelCheckpoint(
           verbose=1)
 
 # base model with synthetic
-base_model_synthetic = get_base_model(input_dim=24, base_n_nodes=24, multiplier_n_nodes = 0.5)
+base_model_synthetic = get_base_model_with_dropout(input_dim=X_train_sc.shape[1], base_n_nodes=300, multiplier_n_nodes = 0.5, prob_dropout = 0.3)
 base_model_synthetic.summary()
 
 
 # train the model, optimizing with validation
-history_synthetic = base_model_synthetic.fit(X_train_synthetic, y_train_synthetic, validation_data=(X_valid, y_valid),
+history_synthetic = base_model_synthetic.fit(X_train_synthetic, y_train_synthetic, validation_data=(X_valid_sc, y_valid),
           epochs=100, batch_size=1, callbacks=[early_stop ,checkpoints_synthetic])
 
 
