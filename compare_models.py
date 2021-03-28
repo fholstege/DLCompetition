@@ -21,13 +21,15 @@ import os
 
 # import custom models defined in define_models
 from define_models import get_base_model, get_base_model_with_dropout
+from help_functions import apply_CV_model
+
 
 # define path for models
 filepath_models = 'files_models/'
 
 # define data path
 data_path = Path(os.getcwd()).parent/"DLCompetition/data"
-data_path
+
 
 # load train and test set
 train_df = pd.read_hdf(data_path/'train_df.hdf5')
@@ -42,6 +44,7 @@ state = 123
 # define training vars
 X_train = train_df.drop("y_train", axis = 1)
 y_train = train_df["y_train"]
+
 
 # define validation set
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size = validation_perc, random_state = state)
@@ -61,9 +64,11 @@ df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axi
 df_train_smogn.columns = list(X_train.columns) + ['y_train']
 df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='extreme' )
 
-# # get X train and y train from oversampling class 
- X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
- y_train_synthetic = np.array(df_train_synthetic['y_train'])
+#  get X train and y train from oversampling class 
+X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
+y_train_synthetic = np.array(df_train_synthetic['y_train'])
+
+
 
 
 
@@ -76,7 +81,15 @@ df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method
 
 # base model 
 base_model = get_base_model(input_dim=X_train_sc.shape[1], base_n_nodes=211, multiplier_n_nodes = 0.5)
-base_model.summary()
+
+# define training vars
+X_train_CV = train_df.drop("y_train", axis = 1)
+y_train_CV = train_df["y_train"]
+
+
+### apply cv here
+results_cv = apply_CV_model(base_model, X_train_CV, y_train_CV, base_model, 5, data_scaler)
+
 
 # save the weights of the best base model here
 checkpoints_base = ModelCheckpoint(
