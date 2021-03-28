@@ -20,7 +20,7 @@ from pathlib import Path
 import os 
 
 # import custom models defined in define_models
-from define_models import get_base_model, get_base_model_with_dropout
+from define_models import get_base_model, get_base_model_with_dropout, get_base_model_with_maxout, get_base_model_with_maxnorm
 
 # define path for models
 filepath_models = 'files_models/'
@@ -57,16 +57,13 @@ y_train, y_valid = np.array(y_train), np.array(y_valid)
 # using CV would mean to first determine the test fold, then do scaling based on rest of folds
 
 # apply smogn to oversample
-df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axis = 1)
-df_train_smogn.columns = list(X_train.columns) + ['y_train']
-df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='extreme' )
+# df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axis = 1)
+# df_train_smogn.columns = list(X_train.columns) + ['y_train']
+# df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='extreme' )
 
-# # get X train and y train from oversampling class 
- X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
- y_train_synthetic = np.array(df_train_synthetic['y_train'])
-
-
-
+# # # get X train and y train from oversampling class 
+# X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
+# y_train_synthetic = np.array(df_train_synthetic['y_train'])
 
 
 #####################
@@ -84,6 +81,7 @@ checkpoints_base = ModelCheckpoint(
           save_best_only=True, 
           save_weights_only=True,
           verbose=1)
+
 # implement early stop - prevents it from continuing after no improvement in validation
 early_stop = EarlyStopping(patience=20) 
 
@@ -97,8 +95,7 @@ history_base = base_model.fit(X_train_sc, y_train, validation_data=(X_valid_sc,y
 
 base_model.load_weights(filepath_models + 'base_model_weights.hdf5')
 
-print('Results Base model - \n Training Loss : {}\nValidation Loss : {} \n Test Loss: {}'.format(base_model.evaluate(X_train, y_train), base_model.evaluate(X_valid, y_valid), base_model.evaluate(X_test, y_test)))
-
+print('Results Base model - \n Training Loss : {}\nValidation Loss : {}'.format(base_model.evaluate(X_train, y_train), base_model.evaluate(X_valid, y_valid)))
 
 #####################
 # In this part of the code, we extend the most basic model - add dropout
@@ -118,14 +115,16 @@ checkpoints_extended = ModelCheckpoint(
 
 # train the model, optimizing with validation
 history_extended = base_model_extended.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid),
-          epochs=100, batch_size=1, callbacks=[early_stop ,checkpoints_extended])
+          epochs=100, batch_size=1, callbacks=[early_stop, checkpoints_extended])
 
 
 # load the best weights from the model, then check how performs in all sets
 # test set is here our own defined one
 base_model_extended.load_weights(filepath_models + 'base_model_extended_weights.hdf5')
 
-print('Results extended model - \n Training Loss : {}\nValidation Loss : {} \n Test Loss: {}'.format(base_model_extended.evaluate(X_train, y_train), base_model_extended.evaluate(X_valid, y_valid), base_model_extended.evaluate(X_test, y_test)))
+print('Results extended model - \n Training Loss : {}\nValidation Loss : {}'.format(base_model_extended.evaluate(X_train_sc, y_train), base_model_extended.evaluate(X_valid_sc, y_valid)))
+
+# val loss: 0.0789
 
 #####################
 # In this part of the code, we add synthetic data to oversample from rare classes from
@@ -196,3 +195,85 @@ msle_valid = mean_squared_log_error(y_valid, backtransformed_predictions_valid)
 msle_test = mean_squared_log_error(y_test, backtransformed_predictions_test)
 
 print('Base model  with logged data - \n Training Loss : {}\nValidation Loss : {} \n Test Loss: {}'.format(msle_train, msle_valid, msle_test))
+
+#####################
+# In this part of the code, we use the maxout activation combined with dropout
+#
+#####################
+
+# save the weights of the model here
+checkpoints_maxout = ModelCheckpoint(
+          filepath_models + 'base_model_maxout_weights.hdf5', 
+          save_best_only=True, 
+          save_weights_only=True,
+          verbose=1)
+
+# base model with synthetic
+base_model_maxout = get_base_model_with_maxout(input_dim=X_train_sc.shape[1], base_n_nodes= 200, multiplier_n_nodes = 0.5, prob_dropout = 0.2, c = 3.0, lr = 0.05)
+base_model_maxout.summary()
+
+
+# train the model, optimizing with validation
+history_maxout = base_model_maxout.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid),
+          epochs=100, batch_size=2, callbacks=[checkpoints_maxout])
+
+
+# load the best weights from the model, then check how performs in all sets
+# test set is here our own defined one
+base_model_maxout.load_weights(filepath_models + 'base_model_maxout_weights.hdf5')
+
+print('Base model with maxout - \n Training Loss : {}\nValidation Loss : {}'.format(base_model_maxout.evaluate(X_train_sc, y_train), base_model_maxout.evaluate(X_valid_sc, y_valid)))
+
+# val loss: 0.07129 for using maxout without dropout
+# val loss: 0.05477 for using dropout, learning rate = 0.1
+# val loss: 0.07444 for using dropout, learning rate = 0.01
+# val loss: 0.06360 for using dropout (p = 0.5) and maxnorm c=3, learning rate = 0.1 (batch = 1)
+
+# val loss: 0.03642 for using dropout and maxnorm c=3, learning rate = 0.1 (batch = 5)
+# val loss: 0.03143 for using dropout and maxnorm c=3, learning rate = 0.1 (batch = 10)
+# val loss: 0.02702 for using dropout and maxnorm c=3, learning rate = 0.1 (batch = 20)
+# val loss: 0.02480 for using dropout and maxnorm c=3, learning rate = 0.1 (batch = 32)
+
+
+# val loss: 0.02362 for using dropout and maxnorm c=3, learning rate = 0.01 (batch = 2)
+# val loss: 0.02315 for using dropout and maxnorm c=4 (only first), learning rate = 0.01 (batch = 2)
+# val loss: 0.02175 for using dropout and maxnorm c=4 (both), learning rate = 0.01 (batch = 2) *****
+# val loss: 0.02392 for using dropout and maxnorm c=3, learning rate = 0.01 (batch = 5)
+# val loss: 0.02690 for using dropout and maxnorm c=4 (only first), learning rate = 0.01 (batch = 5)
+# val loss: 0.05973 for using dropout and maxnorm c=3, learning rate = 0.01 (batch = 10), rate to small to converge here
+
+
+
+#####################
+# In this part of the code, we use the relu activation combined with dropout and maxnorm constraint (c)
+#
+#####################
+
+prob_drop = 0.5
+
+# save the weights of the model here
+checkpoints_maxnorm = ModelCheckpoint(
+          filepath_models + 'base_model_maxnorm_weights.hdf5', 
+          save_best_only=True, 
+          save_weights_only=True,
+          verbose=1)
+
+# base model with synthetic
+base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train_sc.shape[1], base_n_nodes=X_train_sc.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5/(1-prob_drop), prob_dropout = prob_drop, c = 4.0, lr = 0.01)
+base_model_maxnorm.summary()
+
+
+# train the model, optimizing with validation
+history_maxnorm = base_model_maxnorm.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid),
+          epochs=100, batch_size=5, callbacks=[checkpoints_maxnorm])
+
+
+# load the best weights from the model, then check how performs in all sets
+# test set is here our own defined one
+base_model_maxnorm.load_weights(filepath_models + 'base_model_maxnorm_weights.hdf5')
+
+print('Base model with maxnorm - \n Training Loss : {}\nValidation Loss : {}'.format(base_model_maxnorm.evaluate(X_train_sc, y_train), base_model_maxnorm.evaluate(X_valid_sc, y_valid)))
+
+# sometimes val error is below train error for some hyperparameters
+# this suggests that model is still underfitting training data?
+# increasing nodes in 1st and 2nd layer to n/p solves this? not always, but decreases train los to 0.0174
