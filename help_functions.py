@@ -28,8 +28,11 @@ def create_list_with_folds(X_train, y_train, n_folds, data_scaler):
     
     for train_i, valid_i in train_valid_folds:
         
-        X_train_scaled_fold = data_scaler.fit_transform(X_train.loc[train_i,: ])
-        X_valid_scaled_fold = data_scaler.fit_transform(X_train.loc[valid_i,: ])
+        # fit on training folds only
+        data_scaler.fit(X_train.loc[train_i,: ])
+        
+        X_train_scaled_fold = data_scaler.transform(X_train.loc[train_i,: ])
+        X_valid_scaled_fold = data_scaler.transform(X_train.loc[valid_i,: ])
         y_train_fold = y_train[train_i]
         y_valid_fold = y_train[valid_i]
         
@@ -45,7 +48,7 @@ def create_list_with_folds(X_train, y_train, n_folds, data_scaler):
     return l_dicts_fold
 
 
-def apply_CV_model(model,X_train, y_train, model_cv, n_folds, data_scaler):
+def apply_CV_model(model, X_train, y_train, model_cv, n_folds, data_scaler):
     
     # create list with folds
     list_with_folds = create_list_with_folds(X_train, y_train, n_folds, data_scaler)
@@ -69,7 +72,7 @@ def apply_CV_model(model,X_train, y_train, model_cv, n_folds, data_scaler):
         # train the  model, optimizing with validation
         history_model = instance_model.fit(fold['X_train_scaled_fold'], fold['y_train_fold'], 
                                  validation_data=(fold['X_valid_scaled_fold'],fold['y_valid_fold']),
-                  epochs=100, batch_size=1, callbacks=[early_stop_callBack])
+                  epochs=100, batch_size=2, callbacks=[early_stop_callBack])
         
         loss = model_cv.evaluate(fold['X_valid_scaled_fold'], fold['y_valid_fold'], verbose=0)
         
