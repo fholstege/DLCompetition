@@ -82,4 +82,19 @@ def apply_CV_model(model, X_train, y_train, model_cv, n_folds, data_scaler):
 
     return loss_per_fold
             
+# function that retrieves from CV results the CV estimates (average losses)
+def get_cv_estimates(cv_results):
+    
+    # get number of folds
+    k = len(cv_results)
+    
+    loss1 = []
+    loss2= []
+    
+    # gather CV results
+    for i in range(k):
+        loss1.append(cv_results[i][0])
+        loss2.append(cv_results[i][1])
         
+    # take means
+    return(sum(loss1)/k, sum(loss2)/k)

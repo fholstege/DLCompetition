@@ -21,7 +21,7 @@ import os
 
 # import custom models defined in define_models
 from define_models import get_base_model, get_base_model_with_dropout, get_base_model_with_maxout, get_base_model_with_maxnorm
-from help_functions import apply_CV_model
+from help_functions import apply_CV_model, get_cv_estimates
 
 # define path for models
 filepath_models = 'files_models/'
@@ -46,7 +46,10 @@ y_train = train_df["y_train"]
 
 # set seed beforehand?
 # apply CV to model of interest (have to load it first below)
-apply_CV_model(model = 1, X_train = X_train, y_train = y_train, model_cv = base_model_maxnorm, n_folds= 5, data_scaler = preprocessing.StandardScaler())
+cv_results = apply_CV_model(model = 1, X_train = X_train, y_train = y_train, model_cv = base_model_maxnorm, n_folds= 5, data_scaler = preprocessing.StandardScaler())
+
+get_cv_estimates(cv_results)
+
 
 # # define validation set
 # X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size = validation_perc, random_state = state)
@@ -281,13 +284,12 @@ checkpoints_maxnorm = ModelCheckpoint(
           verbose=1)
 
 # base model with synthetic
-base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train.shape[1], base_n_nodes=X_train.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5/(1-prob_drop), prob_dropout = prob_drop, c = 4.0, lr = 0.01)
+base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train.shape[1], base_n_nodes=X_train.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5/(1-prob_drop), prob_dropout = prob_drop, c = 3.0, lr = 0.01)
 base_model_maxnorm.summary()
 
 
 # train the model, optimizing with validation
-history_maxnorm = base_model_maxnorm.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid),
-          epochs=100, batch_size=2, callbacks=[checkpoints_maxnorm])
+history_maxnorm = base_model_maxnorm.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid), epochs=100, batch_size=2, callbacks=[checkpoints_maxnorm])
 
 
 # load the best weights from the model, then check how performs in all sets
