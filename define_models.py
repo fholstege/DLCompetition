@@ -21,6 +21,7 @@ from keras.models import load_model
 import tensorflow_addons as tfa
 import tensorflow as tf
 from tensorflow.keras.constraints import max_norm
+import tensorflow_probability as tfp
 
 
 def get_base_model(input_dim, base_n_nodes, multiplier_n_nodes):
@@ -137,23 +138,26 @@ def get_base_model_with_maxout(input_dim, base_n_nodes, multiplier_n_nodes, prob
     model = Sequential()
     
     # define first layer
+    
     model.add(Dense(base_n_nodes, input_dim=input_dim, kernel_initializer = 'normal', 
-                    activation=tf.keras.layers.LeakyReLU(alpha=0.01), kernel_constraint=max_norm(c)))
+                    activation='relu', kernel_constraint=max_norm(c)))
     
-    # use maxout layer
-    # model.add(tfa.layers.Maxout(int(base_n_nodes)))
-    
+
     # drop out after first layer
     model.add(Dropout(prob_dropout))
     
-    # add another layer and dropout
-    model.add(Dense(int(0.5*base_n_nodes), activation=tf.keras.layers.LeakyReLU(alpha=0.01), kernel_constraint=max_norm(c)))
-
-    # use maxout layer
-    # model.add(tfa.layers.Maxout(int(0.5*base_n_nodes)))
+    # use first maxout layer
+    model.add(tfa.layers.Maxout(int(base_n_nodes*prob_dropout), axis=-1 ))
     
-    model.add(Dropout(prob_dropout))
+    # add another layer and dropout
+    model.add(Dense(int(multiplier_n_nodes*base_n_nodes), activation='relu', kernel_constraint=max_norm(c)))
 
+    # use second dropout
+    model.add(Dropout(prob_dropout))
+     
+    # use second maxout layer
+    model.add(tfa.layers.Maxout(int(multiplier_n_nodes**2 * base_n_nodes)))
+    
     # put out final prediction
     model.add(Dense(1, activation='linear'))
    
@@ -210,3 +214,30 @@ def get_base_model_with_maxnorm(input_dim, base_n_nodes, multiplier_n_nodes, pro
     model.compile(optimizer=opt, loss=MeanSquaredLogarithmicError(), metrics=['mean_absolute_error'])
     return model
 
+def get_bayesian_model(input_dim, base_n_nodes, multiplier_n_nodes, posterior, prior, lr):
+    
+    # define optimizer
+    opt = tf.keras.optimizers.Adam(learning_rate=lr)
+    
+    n_second_layer = int(round(base_n_nodes* multiplier_n_nodes))
+    
+    hidden_units = [base_n_nodes, second_layer]
+
+        # Create hidden layers with weight uncertainty using the DenseVariational layer.
+    for units in hidden_units:
+        features = tfp.layers.DenseVariational(
+            units=units,
+            make_prior_fn=prior,
+            make_posterior_fn=posterior,
+            kl_weight=1 / train_size,
+            activation="relu",
+        )(features)
+    
+    
+    
+    model.add(Dense(1, activation='linear'))
+   
+    model.compile(optimizer=opt, loss=MeanSquaredLogarithmicError(), metrics=['mean_absolute_error'])
+    return model
+    
+    

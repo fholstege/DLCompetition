@@ -49,7 +49,7 @@ def create_list_with_folds(X_train, y_train, n_folds, data_scaler):
     return l_dicts_fold
 
 
-def apply_CV_model(model, X_train, y_train, model_cv, n_folds, data_scaler):
+def apply_CV_model(X_train, y_train, model_cv, n_folds, data_scaler, patience=10):
     
     # create list with folds
     list_with_folds = create_list_with_folds(X_train, y_train, n_folds, data_scaler)
@@ -64,7 +64,7 @@ def apply_CV_model(model, X_train, y_train, model_cv, n_folds, data_scaler):
         early_stop_callBack =  EarlyStopping(
                             monitor='val_loss',
                             min_delta=0,
-                            patience=10,
+                            patience=patience,
                             verbose=1,
                             mode='auto',
                             baseline=None,
