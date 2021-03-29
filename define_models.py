@@ -9,7 +9,7 @@ Created on Mon Mar 22 21:37:39 2021
 
 from tensorflow.keras.losses import MeanSquaredLogarithmicError
 from keras.models import Sequential
-from keras.layers import BatchNormalization, Dense, Input, Dropout
+from keras.layers import BatchNormalization, Dense, Input, Dropout, maximum
 from keras.models import Model
 from keras import backend as K
 from sklearn.model_selection import train_test_split
@@ -138,19 +138,19 @@ def get_base_model_with_maxout(input_dim, base_n_nodes, multiplier_n_nodes, prob
     
     # define first layer
     model.add(Dense(base_n_nodes, input_dim=input_dim, kernel_initializer = 'normal', 
-                    activation='linear', kernel_constraint=max_norm(c)))
+                    activation=tf.keras.layers.LeakyReLU(alpha=0.01), kernel_constraint=max_norm(c)))
     
     # use maxout layer
-    model.add(tfa.layers.Maxout(int(base_n_nodes)))
+    # model.add(tfa.layers.Maxout(int(base_n_nodes)))
     
     # drop out after first layer
     model.add(Dropout(prob_dropout))
     
     # add another layer and dropout
-    model.add(Dense(int(0.5*base_n_nodes), activation='linear', kernel_constraint=max_norm(c)))
+    model.add(Dense(int(0.5*base_n_nodes), activation=tf.keras.layers.LeakyReLU(alpha=0.01), kernel_constraint=max_norm(c)))
 
     # use maxout layer
-    model.add(tfa.layers.Maxout(int(0.5*base_n_nodes)))
+    # model.add(tfa.layers.Maxout(int(0.5*base_n_nodes)))
     
     model.add(Dropout(prob_dropout))
 

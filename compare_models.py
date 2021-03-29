@@ -20,13 +20,8 @@ from pathlib import Path
 import os 
 
 # import custom models defined in define_models
-<<<<<<< HEAD
 from define_models import get_base_model, get_base_model_with_dropout, get_base_model_with_maxout, get_base_model_with_maxnorm
-=======
-from define_models import get_base_model, get_base_model_with_dropout
 from help_functions import apply_CV_model
-
->>>>>>> f3e8e9dd345f6988c3d0de4f28c217ef762564c7
 
 # define path for models
 filepath_models = 'files_models/'
@@ -49,38 +44,35 @@ state = 123
 X_train = train_df.drop("y_train", axis = 1)
 y_train = train_df["y_train"]
 
+# set seed beforehand?
+# apply CV to model of interest (have to load it first below)
+apply_CV_model(model = 1, X_train = X_train, y_train = y_train, model_cv = base_model_maxnorm, n_folds= 5, data_scaler = preprocessing.StandardScaler())
 
-# define validation set
-X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size = validation_perc, random_state = state)
+# # define validation set
+# X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size = validation_perc, random_state = state)
 
-# scale training data, use same mean for train and test set
-data_scaler = preprocessing.StandardScaler()
-X_train_sc = data_scaler.fit_transform(X_train)
-X_valid_sc = data_scaler.fit_transform(X_valid)
+# # scale training data, use same mean for train and test set
+# data_scaler = preprocessing.StandardScaler()
+# X_train_sc = data_scaler.fit_transform(X_train)
+# X_valid_sc = data_scaler.fit_transform(X_valid)
 
-# turn into numpy array
-y_train, y_valid = np.array(y_train), np.array(y_valid)
+# # turn into numpy array
+# y_train, y_valid = np.array(y_train), np.array(y_valid)
 
-# using CV would mean to first determine the test fold, then do scaling based on rest of folds
+# # using CV would mean to first determine the test fold, then do scaling based on rest of folds
 
-# apply smogn to oversample
-<<<<<<< HEAD
+# # apply smogn to oversample
 # df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axis = 1)
 # df_train_smogn.columns = list(X_train.columns) + ['y_train']
 # df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='extreme' )
-=======
-df_train_smogn = pd.concat([pd.DataFrame(X_train_sc),pd.DataFrame(y_train)], axis = 1)
-df_train_smogn.columns = list(X_train.columns) + ['y_train']
-df_train_synthetic = smogn.smoter(data =df_train_smogn, y='y_train', samp_method='extreme' )
 
-#  get X train and y train from oversampling class 
-X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
-y_train_synthetic = np.array(df_train_synthetic['y_train'])
+# #  get X train and y train from oversampling class 
+# X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
+# y_train_synthetic = np.array(df_train_synthetic['y_train'])
 
 
 
 
->>>>>>> f3e8e9dd345f6988c3d0de4f28c217ef762564c7
 
 # # # get X train and y train from oversampling class 
 # X_train_synthetic = np.array(df_train_synthetic[list(X_train.columns) ])
@@ -238,7 +230,7 @@ checkpoints_maxout = ModelCheckpoint(
           verbose=1)
 
 # base model with synthetic
-base_model_maxout = get_base_model_with_maxout(input_dim=X_train_sc.shape[1], base_n_nodes= 200, multiplier_n_nodes = 0.5, prob_dropout = 0.2, c = 3.0, lr = 0.05)
+base_model_maxout = get_base_model_with_maxout(input_dim=X_train.shape[1], base_n_nodes= 300, multiplier_n_nodes = 0.5, prob_dropout = 0.5, c = 4.0, lr = 0.01)
 base_model_maxout.summary()
 
 
@@ -267,6 +259,7 @@ print('Base model with maxout - \n Training Loss : {}\nValidation Loss : {}'.for
 # val loss: 0.02362 for using dropout and maxnorm c=3, learning rate = 0.01 (batch = 2)
 # val loss: 0.02315 for using dropout and maxnorm c=4 (only first), learning rate = 0.01 (batch = 2)
 # val loss: 0.02175 for using dropout and maxnorm c=4 (both), learning rate = 0.01 (batch = 2) *****
+# using leakyrelu and 300 base nodes works slightly better
 # val loss: 0.02392 for using dropout and maxnorm c=3, learning rate = 0.01 (batch = 5)
 # val loss: 0.02690 for using dropout and maxnorm c=4 (only first), learning rate = 0.01 (batch = 5)
 # val loss: 0.05973 for using dropout and maxnorm c=3, learning rate = 0.01 (batch = 10), rate to small to converge here
@@ -288,13 +281,13 @@ checkpoints_maxnorm = ModelCheckpoint(
           verbose=1)
 
 # base model with synthetic
-base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train_sc.shape[1], base_n_nodes=X_train_sc.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5/(1-prob_drop), prob_dropout = prob_drop, c = 4.0, lr = 0.01)
+base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train.shape[1], base_n_nodes=X_train.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5/(1-prob_drop), prob_dropout = prob_drop, c = 4.0, lr = 0.01)
 base_model_maxnorm.summary()
 
 
 # train the model, optimizing with validation
 history_maxnorm = base_model_maxnorm.fit(X_train_sc, y_train, validation_data=(X_valid_sc, y_valid),
-          epochs=100, batch_size=5, callbacks=[checkpoints_maxnorm])
+          epochs=100, batch_size=2, callbacks=[checkpoints_maxnorm])
 
 
 # load the best weights from the model, then check how performs in all sets
