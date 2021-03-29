@@ -7,6 +7,7 @@ Created on Sat Mar 27 14:14:00 2021
 
 from sklearn.model_selection import KFold
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+import tensorflow as tf
 
 
 
@@ -53,8 +54,14 @@ def apply_CV_model(model, X_train, y_train, model_cv, n_folds, data_scaler):
     # create list with folds
     list_with_folds = create_list_with_folds(X_train, y_train, n_folds, data_scaler)
     
-    # early stopping to save best model 
-    early_stop_callBack =  EarlyStopping(
+    loss_per_fold = []
+    
+    instance_model = model_cv
+    
+    for fold in list_with_folds:
+        
+        # early stopping to save best model 
+        early_stop_callBack =  EarlyStopping(
                             monitor='val_loss',
                             min_delta=0,
                             patience=10,
@@ -63,11 +70,8 @@ def apply_CV_model(model, X_train, y_train, model_cv, n_folds, data_scaler):
                             baseline=None,
                             restore_best_weights=True
                             )
-    loss_per_fold = []
-    
-    for fold in list_with_folds:
         
-        instance_model = model_cv
+        reset_weights(instance_model)
         
         # train the  model, optimizing with validation
         history_model = instance_model.fit(fold['X_train_scaled_fold'], fold['y_train_fold'], 
@@ -98,3 +102,30 @@ def get_cv_estimates(cv_results):
         
     # take means
     return(sum(loss1)/k, sum(loss2)/k)
+
+
+# github code: reinitialise weights in TF2 model https://github.com/keras-team/keras/issues/341
+def reset_weights(model):
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.Model): #if you're using a model as a layer
+            reset_weights(layer) #apply function recursively
+            continue
+
+        #where are the initializers?
+        if hasattr(layer, 'cell'):
+            init_container = layer.cell
+        else:
+            init_container = layer
+
+        for key, initializer in init_container.__dict__.items():
+            if "initializer" not in key: #is this item an initializer?
+                  continue #if no, skip it
+
+            # find the corresponding variable, like the kernel or the bias
+            if key == 'recurrent_initializer': #special case check
+                var = getattr(init_container, 'recurrent_kernel')
+            else:
+                var = getattr(init_container, key.replace("_initializer", ""))
+
+            var.assign(initializer(var.shape, var.dtype))
+            #use the initializer

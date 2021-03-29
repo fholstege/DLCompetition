@@ -50,6 +50,9 @@ cv_results = apply_CV_model(model = 1, X_train = X_train, y_train = y_train, mod
 
 get_cv_estimates(cv_results)
 
+# strange behaviour: for first run, initial loss is very high like 33, subsequent runs start as much lower loss?
+
+
 
 # # define validation set
 # X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size = validation_perc, random_state = state)
@@ -284,7 +287,7 @@ checkpoints_maxnorm = ModelCheckpoint(
           verbose=1)
 
 # base model with synthetic
-base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train.shape[1], base_n_nodes=X_train.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5/(1-prob_drop), prob_dropout = prob_drop, c = 3.0, lr = 0.01)
+base_model_maxnorm = get_base_model_with_maxnorm(input_dim=X_train.shape[1], base_n_nodes=X_train.shape[1]/(1-prob_drop), multiplier_n_nodes = 0.5, prob_dropout = prob_drop, c = 4.0, lr = 0.01)
 base_model_maxnorm.summary()
 
 
@@ -301,3 +304,9 @@ print('Base model with maxnorm - \n Training Loss : {}\nValidation Loss : {}'.fo
 # sometimes val error is below train error for some hyperparameters
 # this suggests that model is still underfitting training data?
 # increasing nodes in 1st and 2nd layer to n/p solves this? not always, but decreases train los to 0.0174
+
+
+
+
+
+# train final model on whole dataset!
