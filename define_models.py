@@ -22,6 +22,7 @@ import tensorflow_addons as tfa
 import tensorflow as tf
 from tensorflow.keras.constraints import max_norm
 import tensorflow_probability as tfp
+import keras
 
 
 def get_base_model(input_dim, base_n_nodes, multiplier_n_nodes):
@@ -214,14 +215,55 @@ def get_base_model_with_maxnorm(input_dim, base_n_nodes, multiplier_n_nodes, pro
     model.compile(optimizer=opt, loss=MeanSquaredLogarithmicError(), metrics=['mean_absolute_error'])
     return model
 
-def get_bayesian_model(input_dim, base_n_nodes, multiplier_n_nodes, posterior, prior, lr):
+
+
+####  set of functions for bayesian neural net
+
+# Define the prior weight distribution as Normal of mean=0 and stddev=1.
+# Note that, in this example, the we prior distribution is not trainable,
+# as we fix its parameters.
+def prior(kernel_size, bias_size, dtype=None):
+    n = kernel_size + bias_size
+    prior_model = keras.Sequential(
+        [
+            tfp.layers.DistributionLambda(
+                lambda t: tfp.distributions.MultivariateNormalDiag(
+                    loc=tf.zeros(n), scale_diag=tf.ones(n)
+                )
+            )
+        ]
+    )
+    return prior_model
+
+
+# Define variational posterior weight distribution as multivariate Gaussian.
+# Note that the learnable parameters for this distribution are the means,
+# variances, and covariances.
+def posterior(kernel_size, bias_size, dtype=None):
+    n = kernel_size + bias_size
+    posterior_model = keras.Sequential(
+        [
+            tfp.layers.VariableLayer(
+                tfp.layers.MultivariateNormalTriL.params_size(n), dtype=dtype
+            ),
+            tfp.layers.MultivariateNormalTriL(n),
+        ]
+    )
+    return posterior_model
+def get_bayesian_model(input_dim, base_n_nodes, multiplier_n_nodes, posterior, prior, lr, train_size):
     
     # define optimizer
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
     
+    # define how many in second layer
     n_second_layer = int(round(base_n_nodes* multiplier_n_nodes))
     
-    hidden_units = [base_n_nodes, second_layer]
+    # the number in each layer
+    hidden_units = [base_n_nodes, n_second_layer]
+    
+    
+    inputs = create_model_inputs()
+    features = keras.layers.concatenate(list(inputs.values()))
 
         # Create hidden layers with weight uncertainty using the DenseVariational layer.
     for units in hidden_units:
@@ -233,7 +275,8 @@ def get_bayesian_model(input_dim, base_n_nodes, multiplier_n_nodes, posterior, p
             activation="relu",
         )(features)
     
-    
+    outputs = layers.Dense(units=1)(features)
+    model = keras.Model(inputs=inputs, outputs=outputs)
     
     model.add(Dense(1, activation='linear'))
    
