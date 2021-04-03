@@ -21,8 +21,9 @@ from keras.models import load_model
 import tensorflow_addons as tfa
 import tensorflow as tf
 from tensorflow.keras.constraints import max_norm
-import tensorflow_probability as tfp
 import keras
+from keras.layers import LeakyReLU
+
 
 
 def get_base_model(input_dim, base_n_nodes, multiplier_n_nodes):
@@ -191,6 +192,9 @@ def get_base_model_with_maxnorm(input_dim, base_n_nodes, multiplier_n_nodes, pro
 
    """
    
+
+   
+   
     # define optimizer
     opt = tf.keras.optimizers.Adam(learning_rate=lr)
    
@@ -200,13 +204,20 @@ def get_base_model_with_maxnorm(input_dim, base_n_nodes, multiplier_n_nodes, pro
     
     # define first layer
     model.add(Dense(base_n_nodes,input_dim=input_dim, kernel_initializer = 'normal', 
-                    activation='relu', kernel_constraint=max_norm(c)))
+                     kernel_constraint=max_norm(c)))
+    
+    # add leakyrelu activation
+    model.add(LeakyReLU(alpha=0.01))
     
     # drop out after first layer
     model.add(Dropout(prob_dropout))
     
     # add another layer and dropout
-    model.add(Dense(n_second_layer, activation='relu', kernel_constraint=max_norm(c)))
+    model.add(Dense(n_second_layer,  kernel_constraint=max_norm(c)))
+    
+    # add leaky relu activation
+    model.add(LeakyReLU(alpha=0.01))
+
     model.add(Dropout(prob_dropout))
     
     # put out final prediction
@@ -217,70 +228,5 @@ def get_base_model_with_maxnorm(input_dim, base_n_nodes, multiplier_n_nodes, pro
 
 
 
-####  set of functions for bayesian neural net
-
-# Define the prior weight distribution as Normal of mean=0 and stddev=1.
-# Note that, in this example, the we prior distribution is not trainable,
-# as we fix its parameters.
-def prior(kernel_size, bias_size, dtype=None):
-    n = kernel_size + bias_size
-    prior_model = keras.Sequential(
-        [
-            tfp.layers.DistributionLambda(
-                lambda t: tfp.distributions.MultivariateNormalDiag(
-                    loc=tf.zeros(n), scale_diag=tf.ones(n)
-                )
-            )
-        ]
-    )
-    return prior_model
-
-
-# Define variational posterior weight distribution as multivariate Gaussian.
-# Note that the learnable parameters for this distribution are the means,
-# variances, and covariances.
-def posterior(kernel_size, bias_size, dtype=None):
-    n = kernel_size + bias_size
-    posterior_model = keras.Sequential(
-        [
-            tfp.layers.VariableLayer(
-                tfp.layers.MultivariateNormalTriL.params_size(n), dtype=dtype
-            ),
-            tfp.layers.MultivariateNormalTriL(n),
-        ]
-    )
-    return posterior_model
-def get_bayesian_model(input_dim, base_n_nodes, multiplier_n_nodes, posterior, prior, lr, train_size):
-    
-    # define optimizer
-    opt = tf.keras.optimizers.Adam(learning_rate=lr)
-    
-    # define how many in second layer
-    n_second_layer = int(round(base_n_nodes* multiplier_n_nodes))
-    
-    # the number in each layer
-    hidden_units = [base_n_nodes, n_second_layer]
-    
-    
-    inputs = create_model_inputs()
-    features = keras.layers.concatenate(list(inputs.values()))
-
-        # Create hidden layers with weight uncertainty using the DenseVariational layer.
-    for units in hidden_units:
-        features = tfp.layers.DenseVariational(
-            units=units,
-            make_prior_fn=prior,
-            make_posterior_fn=posterior,
-            kl_weight=1 / train_size,
-            activation="relu",
-        )(features)
-    
-    outputs = layers.Dense(units=1)(features)
-    model = keras.Model(inputs=inputs, outputs=outputs)
-    
-    model.add(Dense(1, activation='linear'))
-   
-    model.compile(optimizer=opt, loss=MeanSquaredLogarithmicError(), metrics=['mean_absolute_error'])
-    return model
     
     

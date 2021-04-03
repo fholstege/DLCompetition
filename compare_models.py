@@ -21,7 +21,7 @@ import os
 
 # import custom models defined in define_models
 from define_models import get_base_model, get_base_model_with_dropout, get_base_model_with_maxout, get_base_model_with_maxnorm
-from help_functions import apply_CV_model, get_cv_estimates
+from help_functions import apply_CV_model, get_cv_estimates, create_list_with_folds
 
 # define path for models
 filepath_models = 'files_models/'
@@ -43,12 +43,24 @@ state = 123
 # define training vars
 X_train = train_df.drop("y_train", axis = 1)
 y_train = train_df["y_train"]
+y_train_logged = np.log(y_train)
+
+print("N of variables: ", len(X_train.columns))
+
+# remove two outliers
+train_df_noOutliers = train_df[(train_df['LotArea'] < 200000) & (train_df['TotalBsmtSF'] < 6000)]
+
+# define training vars
+X_train_noOutliers = train_df_noOutliers.drop("y_train", axis = 1)
+y_train_noOutliers = train_df_noOutliers["y_train"]
+
 
 # define the data scaler - mean 0, var of 1
 data_scaler = preprocessing.StandardScaler()
 
 # n inputs for the model 
 n_inputs = X_train.shape[1]
+
 
 # probability of droput
 prob_drop = 0.5
@@ -64,7 +76,7 @@ base_model = get_base_model(input_dim=n_inputs, base_n_nodes=n_inputs, multiplie
 
 
 # apply cv here 
-results_cv_base = apply_CV_model(X_train, y_train, base_model, K_folds, data_scaler)
+results_cv_base = apply_CV_model(X_train_noOutliers, y_train_noOutliers, base_model, K_folds, data_scaler)
 
 msle_cv_base= [item[0] for item in results_cv_base]
 
@@ -89,7 +101,9 @@ msle_cv_base_dropout= [item[0] for item in results_cv_base_dropout]
 # base model with max norm
 base_model_maxnorm = get_base_model_with_maxnorm(input_dim=n_inputs, base_n_nodes=n_inputs/(1-prob_drop), multiplier_n_nodes = 0.5, prob_dropout = prob_drop, c = 4.0, lr = 0.01)
 
+
 results_cv_base_dropout_maxnorm  = apply_CV_model(X_train, y_train, base_model_maxnorm, K_folds, data_scaler)
+
 
 msle_cv_base_dropout_maxnorm = [item[0] for item in results_cv_base_dropout_maxnorm]
 
@@ -111,3 +125,46 @@ np.mean(msle_cv_base)
 np.mean(msle_cv_base_dropout)
 np.mean(msle_cv_base_dropout_maxnorm)
 np.mean(msle_cv_base_dropout_maxout)
+
+
+
+
+###################
+# The base_model_maxnorm seems to perform best - here we try different values for the p for it
+# 
+###################
+
+# probabilities to try out
+probabilities_dropout = [0.4,0.5,0.6]
+
+
+def try_different_p(lProbabilities):
+    
+    # get result of cv per probability
+    result_per_prob = []
+    
+    # loop through each probability
+    for experimental_prob_dropout in lProbabilities:
+        
+        print("Trying out a p of: ", experimental_prob_dropout)
+        
+        # define the model
+        base_model_maxnorm_probExp = get_base_model_with_maxnorm(input_dim=n_inputs, base_n_nodes=n_inputs/(1-experimental_prob_dropout), multiplier_n_nodes = 0.5, prob_dropout = experimental_prob_dropout, c = 4.0, lr = 0.01)
+        
+        # get cv results for the p
+        results_cv_base_dropout_maxnorm_probExp  = apply_CV_model(X_train, y_train, base_model_maxnorm_probExp, K_folds, data_scaler)
+        
+        # get msle for the cv
+        msle_cv_base_dropout_maxnorm_probExp = [item[0] for item in results_cv_base_dropout_maxnorm_probExp]
+        
+        # get mean result and save
+        result_per_prob.append(np.mean(msle_cv_base_dropout_maxnorm_probExp))
+        
+        print("Result: ", np.mean(msle_cv_base_dropout_maxnorm_probExp))
+    
+    return result_per_prob
+
+result_per_prob_leakyRelu = try_different_p(probabilities_dropout)
+
+plt.plot(probabilities_dropout,result_per_prob_leakyRelu )
+

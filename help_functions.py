@@ -8,8 +8,8 @@ Created on Sat Mar 27 14:14:00 2021
 from sklearn.model_selection import KFold
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 import tensorflow as tf
-
-
+from tensorflow.keras.losses import mean_squared_logarithmic_error
+import numpy as np
 
 
 
@@ -48,8 +48,8 @@ def create_list_with_folds(X_train, y_train, n_folds, data_scaler):
     
     return l_dicts_fold
 
-
-def apply_CV_model(X_train, y_train, model_cv, n_folds, data_scaler, patience=10):
+# if log_predictions = True, then y_train needs to be in log
+def apply_CV_model(X_train, y_train, model_cv, n_folds, data_scaler, patience=10, log_predictions=False):
     
     # create list with folds
     list_with_folds = create_list_with_folds(X_train, y_train, n_folds, data_scaler)
@@ -78,12 +78,26 @@ def apply_CV_model(X_train, y_train, model_cv, n_folds, data_scaler, patience=10
                                  validation_data=(fold['X_valid_scaled_fold'],fold['y_valid_fold']),
                   epochs=100, batch_size=2, callbacks=[early_stop_callBack])
         
-        loss = model_cv.evaluate(fold['X_valid_scaled_fold'], fold['y_valid_fold'], verbose=0)
+        
+        # if logged, unlog and check
+        if log_predictions:
+            
+            # get the logged predictions, unlog these
+            logged_predictions_fold = model_cv.predict(fold['X_valid_scaled_fold'])
+            unlogged_predictions_fold = np.exp(logged_predictions_fold)
+            
+            # get the (unlogged) test data
+            unlogged_dependent_fold = np.exp(fold['y_valid_fold'])
+            
+            loss = mean_squared_logarithmic_error(unlogged_predictions_fold, unlogged_dependent_fold)
+        else:
+            
+            loss = model_cv.evaluate(fold['X_valid_scaled_fold'], fold['y_valid_fold'], verbose=0)
         
         print("Fold done.\n Loss: ", loss)
         
         loss_per_fold.append(loss)
-
+        
     return loss_per_fold
             
 # function that retrieves from CV results the CV estimates (average losses)

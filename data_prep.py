@@ -8,6 +8,8 @@ import pandas as pd
 from sklearn import preprocessing
 from pathlib import Path
 import matplotlib.pyplot as plt
+import os 
+
 
 # load train and test dataframes
 df_train = pd.read_csv("https://www.dropbox.com/s/bawlkeolef1bse2/train_dat.csv?dl=1", 
@@ -36,11 +38,11 @@ for i, df in enumerate(final_dfs):
 # CASE 1
 # leave yearbuilt etc as categorical, make quality variables categorical
 # alternative categorical features
-# l_cat_features = ["YearBuilt", "YearRemodAdd", "MoSold", "YrSold", "OverallQual", "OverallCond"]
+#l_cat_features = ["YearBuilt", "YearRemodAdd", "MoSold", "YrSold", "OverallQual", "OverallCond"]
 
-# for i, df in enumerate(final_dfs):
-#     # get categorical variables coded as dummies
-#     # do NOT drop first dummy, let NN figure out what is important
+#for i, df in enumerate(final_dfs):
+     # get categorical variables coded as dummies
+     # do NOT drop first dummy, let NN figure out what is important
 #     final_dfs[i] = pd.get_dummies(df, columns = l_cat_features)
 
 # CASE 2
@@ -101,8 +103,8 @@ df_train, df_test = final_dfs
 list(set(df_train.columns) - set(df_test.columns))
 
 # construct file path
-data_path = (Path(__file__).parent)
+data_path = Path(os.getcwd()).parent/"DLCompetition/data"
 
 # save as hdf5
-df_train.to_hdf(data_path/"data/train_df.hdf5", mode = "w", key = "train")
-df_test.to_hdf(data_path/"data/test_df.hdf5", mode = "w", key = "test")
+df_train.to_hdf(data_path/"train_df.hdf5", mode = "w", key = "train")
+df_test.to_hdf(data_path/"test_df.hdf5", mode = "w", key = "test")
