@@ -28,12 +28,12 @@ final_dfs = [df_train, df_test]
 # ORIGINAL CASE
 # leave yearbuilt etc as categorical, add no variables
 # determine categorical features
-l_cat_features = ["YearBuilt", "YearRemodAdd", "MoSold", "YrSold"]
+#l_cat_features = ["YearBuilt", "YearRemodAdd", "MoSold", "YrSold"]
 
-for i, df in enumerate(final_dfs):
+#for i, df in enumerate(final_dfs):
     # get categorical variables coded as dummies
     # do NOT drop first dummy, let NN figure out what is important
-    final_dfs[i] = pd.get_dummies(df, columns = l_cat_features)
+#    final_dfs[i] = pd.get_dummies(df, columns = l_cat_features)
 
 # CASE 1
 # leave yearbuilt etc as categorical, make quality variables categorical
@@ -75,23 +75,23 @@ for i, df in enumerate(final_dfs):
 # CASE 3
 # years and quality as continuous variables, add variables
 
-# for i, df in enumerate(final_dfs):
+for i, df in enumerate(final_dfs):
     
-#     # construct additional features
-#     # indicators
-#     # openporch, wooddeck, enclosedporch, screenporch
-#     final_dfs[i]["HasOpenPorch"] = pd.get_dummies(final_dfs[i]["OpenPorchSF"] > 0, drop_first=True)
+     # construct additional features
+     # indicators
+     # openporch, wooddeck, enclosedporch, screenporch
+     final_dfs[i]["HasOpenPorch"] = pd.get_dummies(final_dfs[i]["OpenPorchSF"] > 0, drop_first=True)
 
-#     final_dfs[i]["HasWoodDeck"] = pd.get_dummies(final_dfs[i]["WoodDeckSF"] > 0, drop_first=True)
+     final_dfs[i]["HasWoodDeck"] = pd.get_dummies(final_dfs[i]["WoodDeckSF"] > 0, drop_first=True)
 
-#     final_dfs[i]["HasEnclPorch"] = pd.get_dummies(final_dfs[i]["EnclosedPorch"] > 0, drop_first=True)
+     final_dfs[i]["HasEnclPorch"] = pd.get_dummies(final_dfs[i]["EnclosedPorch"] > 0, drop_first=True)
 
-#     final_dfs[i]["HasScreenPorch"] = pd.get_dummies(final_dfs[i]["ScreenPorch"] > 0, drop_first=True)
+     final_dfs[i]["HasScreenPorch"] = pd.get_dummies(final_dfs[i]["ScreenPorch"] > 0, drop_first=True)
     
-#     # adding total square feed and time differences
-#     final_dfs[i]["RemodMinusBuilt"] =  final_dfs[i]["YearRemodAdd"] - final_dfs[i]["YearBuilt"] + 1
-#     final_dfs[i]["SoldMinusRemod"] = final_dfs[i]["YrSold"] -  final_dfs[i]["YearRemodAdd"] + 1
-#     final_dfs[i]["TotalHouseSF"] = final_dfs[i]["TotalBsmtSF"] + final_dfs[i]["X1stFlrSF"] + final_dfs[i]["X2ndFlrSF"]
+     # adding total square feed and time differences
+     final_dfs[i]["RemodMinusBuilt"] =  final_dfs[i]["YearRemodAdd"] - final_dfs[i]["YearBuilt"] + 1
+     final_dfs[i]["SoldMinusRemod"] = final_dfs[i]["YrSold"] -  final_dfs[i]["YearRemodAdd"] + 1
+     final_dfs[i]["TotalHouseSF"] = final_dfs[i]["TotalBsmtSF"] + final_dfs[i]["X1stFlrSF"] + final_dfs[i]["X2ndFlrSF"]
     
 
 ################################################
