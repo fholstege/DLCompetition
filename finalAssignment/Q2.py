@@ -38,9 +38,6 @@ kernel_y = kernel_x.T
 def apply_filter(img, filter):
     # get shape dimensions
     x,y,z = img.shape
-    
-    # determine number of steps
-    int(x) / int(filter.shape[0])
 
     # init convolution
     C = np.zeros((x-3,y-3,z))
