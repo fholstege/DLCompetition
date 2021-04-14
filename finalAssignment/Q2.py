@@ -9,7 +9,7 @@ from scipy import ndimage, misc
 # define path to image parent directory
 image_path = Path(os.getcwd())
 
-# load image as greyscale
+# load image as grayscale with alpha values
 image = Image.open(image_path/"triang.png").convert('LA')
 
 # check size
@@ -27,6 +27,7 @@ print(padded_image.size)
 
 # convert to numpy array
 img_array = np.array(padded_image)
+print(img_array.shape)
 
 # code prewitt filter
 kernel_x = np.array([[1,0,-1],
@@ -40,12 +41,12 @@ def apply_filter(img, filter):
     x,y,z = img.shape
 
     # init convolution
-    C = np.zeros((x-3,y-3,z))
+    C = np.zeros((x-2,y-2,z))
 
     # compute Gx going over z, y, x dimensions
     for k in range(z):
-        for j in range(y-3):
-            for i in range(x-3):
+        for j in range(y-2):
+            for i in range(x-2):
                 # print(i,j,k)
                 C[i,j,k] = np.sum(np.multiply(filter, img[i:i+3, j:j+3, k]))
                 
@@ -60,21 +61,17 @@ Gy = apply_filter(img_array, kernel_y)
 print(Gy.shape)
 Image.fromarray(Gy.astype(np.uint8))
 
-# apply formula from wikipedia
+# apply formula from wikipedia to combine kernels
 G = np.sqrt(np.power(Gx, 2) + np.power(Gy, 2))
 
+# scale pixels back to a maximum of 255
+G = G/np.max(G) * 255
+
+# convert to integers
+G = G.astype(np.uint8)
+
 # print image
-prewitt_output = Image.fromarray(G.astype(np.uint8))
-prewitt_output
-
-# save img
-prewitt_output.save(image_path/"prewitt_img.png")
-
-# check against package
-# apply prewitt filter
-prewitt_img = ndimage.prewitt(padded_image, mode = "reflect")
-
-# plot result
-prewitt_png = Image.fromarray(prewitt_img)
-prewitt_png
-
+plt.figure(figsize = (6,6))
+plt.imshow(G[:,:,1], cmap='gray')
+plt.tight_layout()
+plt.savefig(image_path/"prewitt_img.png", dpi = 320)
